@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bagisto Headless Demo</title>
+    <style>
+        :root {
+            --bg: #f6f8fc;
+            --card: #ffffff;
+            --text: #172133;
+            --accent: #d64045;
+            --accent-2: #2243b6;
+            --border: #d9e0ef;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 10% 10%, #fff4dc 0, transparent 40%),
+                radial-gradient(circle at 90% 90%, #e8f0ff 0, transparent 35%),
+                var(--bg);
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #fff 0%, #eef3ff 100%);
+            border: 1px solid var(--border);
+            border-left: 6px solid var(--accent);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+            color: var(--accent-2);
+        }
+
+        .hero p {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .status {
+            margin: 14px 0;
+            font-size: 14px;
+        }
+
+        .products {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 4px 16px rgba(29, 42, 68, 0.08);
+        }
+
+        .card h3 {
+            margin: 0 0 10px;
+            font-size: 17px;
+            line-height: 1.35;
+        }
+
+        .price {
+            margin: 0 0 12px;
+            color: #0a7a3f;
+            font-weight: 700;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--accent-2);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <section class="hero">
+            <h1>Pham Vinh - MSSV: 23810310085</h1>
+            <p>Bagisto Headless Commerce - Frontend Demo</p>
+        </section>
+
+        <div id="status" class="status">Dang tai du lieu san pham...</div>
+        <section id="products" class="products"></section>
+    </main>
+
+    <script>
+                // GraphQL query dung de goi API /graphql va lay 5 san pham moi nhat.
+                // Cac truong duoc chon (id, name, price, description, urlKey) chi la nhung du lieu
+                // can hien thi tren giao dien, dung voi tinh chat cua Headless Commerce.
+        const QUERY_LATEST_PRODUCTS = `
+        {
+          allProducts(
+            input: [
+              { key: "page", value: "1" }
+              { key: "limit", value: "5" }
+              { key: "sort", value: "created_at" }
+              { key: "order", value: "desc" }
+            ]
+          ) {
+            data {
+              id
+              name
+              price
+              description
+              urlKey
+            }
+          }
+        }
+        `;
+
+        // Goi API GraphQL bang Fetch API.
+        // Buoc nay gui cau query len server Bagisto de lay du lieu san pham thay vi
+        // viet du lieu cung trong HTML.
+        fetch("/graphql", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({ query: QUERY_LATEST_PRODUCTS })
+        })
+            .then((response) => response.json())
+            .then((result) => {
+                const status = document.getElementById("status");
+                const container = document.getElementById("products");
+
+                // In ra console de minh chung bai lam theo yeu cau de bai.
+                console.log("Bai lam cua: Pham Vinh");
+                console.log(result);
+
+                if (result.errors) {
+                    // Neu GraphQL tra loi, hien thi thong bao de de kiem tra loi cau query.
+                    status.textContent = "Loi GraphQL.";
+                    container.innerHTML = "<pre>" + JSON.stringify(result.errors, null, 2) + "</pre>";
+
+                    return;
+                }
+
+                // Lay mang san pham tu response GraphQL va dua len giao dien dang card.
+                const products = result?.data?.allProducts?.data || [];
+
+                status.textContent = `Da tai ${products.length} san pham tu GraphQL API.`;
+
+                container.innerHTML = products
+                    .map((product) => {
+                        // Chuyen gia sang dinh dang tien te VND de hien thi de nhin hon.
+                        const formattedPrice = Number(product.price || 0).toLocaleString("vi-VN", {
+                            style: "currency",
+                            currency: "VND"
+                        });
+
+                        return `
+                            <article class="card">
+                                <h3>${product.name}</h3>
+                                <p class="price">Gia: ${formattedPrice}</p>
+                                <!-- Nut Chi tiet chi demo thong tin urlKey cua san pham lay tu API -->
+                                <button class="btn" onclick="alert('URL Key: ${product.urlKey}')">Chi tiet</button>
+                            </article>
+                        `;
+                    })
+                    .join("");
+            })
+            .catch((error) => {
+                const status = document.getElementById("status");
+
+                // Neu khong ket noi duoc endpoint /graphql thi thong bao loi mang/URL.
+                status.textContent = "Khong the ket noi GraphQL API.";
+                console.error("Loi:", error);
+            });
+    </script>
+</body>
+</html>
