@@ -10,4 +10,3 @@ Dùng REST API khi lấy tất cả trường của sản phẩm sẽ trả về
 
 Thay đổi giá sản phẩm qua Headless API:
 Em sẽ sử dụng Mutation, vì Mutation trong GraphQL được thiết kế để thay đổi dữ liệu trên server (tạo, cập nhật, xóa). Query chỉ dùng để truy xuất dữ liệu, không gây thay đổi trạng thái server.
-
